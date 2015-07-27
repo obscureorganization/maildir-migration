@@ -1,0 +1,6 @@
+#!/bin/sh
+batch <<EOF
+echo "Here is the mbox-to-maildir conversion log:"
+time /usr/local/bin/mb2md.pl -U -K -S -t -m
+time /usr/local/bin/mb2md.pl -U -K -S -t -s mail -R
+EOF
