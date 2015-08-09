@@ -35,8 +35,13 @@ find_active_mail_users_in_procmailrc() {
 }
 find_active_mail_users_whitelist() {
 	# These users are whitelisted
-	echo <<EOF
+	cat <<EOF
 root
+smccandlish
+afry
+alex
+rbulling
+faisal
 EOF
 }
 
@@ -51,7 +56,7 @@ find_active_mail_users_by_finger() {
 find_active_users_by_home_directory() {
 	TMPDATE=$(mktemp -t mailsuspenddatehomedir.XXXXXXXXXX) && {
 		touch "$TMPDATE" --date="Jan 1 $(last_year)"
-		ls -l "$TMPDATE"
+		#ls -l "$TMPDATE"
 		find /home -maxdepth 1 -type d -newer "$TMPDATE" | cut -d/ -f 3 
 		rm -f "$TMPDATE"
 	} || {
@@ -63,7 +68,7 @@ find_active_users_by_home_directory() {
 find_active_users_by_maildir_dovecot_index() {
 	TMPDATE=$(mktemp -t mailsuspenddatedovecot.XXXXXXXXXX) && {
 		touch "$TMPDATE" --date="Jan 1 $(last_year)"
-		ls -l "$TMPDATE"
+		#ls -l "$TMPDATE"
 		find /home -maxdepth 3 -type f -name dovecot.index -newer "$TMPDATE" | cut -d/ -f 3 
 		rm -f "$TMPDATE"
 	} || {
@@ -82,7 +87,7 @@ find_active_mail_users() {
                 find_active_users_by_maildir_dovecot_index
                 find_active_mail_users_whitelist
 		cat /var/log/maillog* | find_active_mail_users_in_maillog
-	) | sort -u
+	) | sort -u | grep -v '^$'
 }
 
 find_mail_users() {
@@ -101,7 +106,7 @@ find_inactive_mail_users() {
 	(
 		find_inactive_mail_users_already_processed
 		find_inactive_mail_users_suspended
-	) | sort -u
+	) | sort -u | grep -v '^$'
 }
 
 find_inactive_mail_users_to_suspend() {

@@ -1,8 +1,9 @@
 # maildir-migration
 A set of scripts, tools, and notes to help convert from an mbox-formatted set of mailboxes to Maildir mailboxes.
 
-The Obscure Organization has historically used mbox-format mailboxes, but we're finally moving to Maildir.
+The Obscure Organization has historically used mbox-format mailboxes, but we are finally moving to Maildir.
 
+As part of this effort, we are suspending mail delivery to mailboxes that have not been checked for more than a year. See the `find-active-mail-users` script.
 
 mbox to maildir conversion for obscure.org
 ==========================================
@@ -18,12 +19,12 @@ corresponding to the From date of the email. Those changes are now here:
 https://github.com/obscureorganization/mb2md
 
 The mb2md.pl script lives in /usr/local/bin/mb2md.pl and
-the sources are in /usr/local/src/production/mb2md on tiamat.:
+the sources are in /usr/local/src/production/mb2md on tiamat:
 
 I cleaned up my own mail directories before I began:
 
 * Changed the procmail mail default directory back to mail/
-* Changed the names of incoming directories so that they started with ">"
+* Changed the names of procmail-sorted incoming directories so that they started with ">" because they sort better that way in iOS mail
 
 Here is a snippet of my procmail config: 
 ```
@@ -74,7 +75,7 @@ EOF
 
 This script is now in convert-mbox-to-maildir in this project.
 
-Here's a good way to gauge how many people are still using the legacy imapd:
+Here is a good way to gauge how many people are still using the legacy imapd:
 
 sudo grep imapd /var/log/maillog /var/log/maillog.*  | awk '/Login/{print $7}'
 | cut -f2 -d= |  sort -u > imapusers.txt

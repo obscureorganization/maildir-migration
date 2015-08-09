@@ -1,0 +1,82 @@
+#!/bin/bash
+# Use unofficial bash strict mode http://redsymbol.net/articles/unofficial-bash-strict-mode/
+set -euo pipefail
+IFS=$'\n\t'
+
+# Credit to http://stackoverflow.com/a/246128
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+
+args=${1:-}
+prog=${0:-}
+banner_written="false"
+
+etcmail="/etc/mail"
+vut="$etcmail/virtusertable"
+suspension_letter="/var/local/obscure/ops/suspend-mail.txt"
+hosts="obscure.org tiamat.obscure.org"
+
+write_banner() {
+    if ! "$banner_written"; then 
+        echo "# suspend-mail-delivery run at $(date --rfc-3339=seconds)" >> /etc/mail/virtusertable
+        banner_written="true"
+    fi
+}
+
+tick() {
+    echo -n "."
+}
+
+suspend_user() {
+    user=${1:-}
+    if ! id "$user" > /dev/null; then
+        return 2
+    else
+        mbox="/var/spool/mail/$user"
+        zipfile="/home/$user/inbox-old.zip"
+        lockfile="$mbox.lock"
+        echo -n "suspending $user "
+        (
+            trap "rm -f $lockfile" EXIT
+            flock -e -w 60 200
+            # ... commands executed under lock ...
+            tick
+            zip -9 -q < "$mbox" > "$zipfile"
+            tick
+            cat /dev/null > "$mbox"
+        ) 200>"$lockfile"
+        rm -f "$lockfile"
+        chown "$user":"$user" "$zipfile"
+        chmod 0600 "$zipfile"
+        tick
+        /usr/sbin/sendmail -t "$user" < "$suspension_letter"
+        sleep 10 # wait for new mail to be delivered, normally quick
+        tick
+        write_banner
+        for host in $hosts; do
+            echo "$user@$host error:5.2.1:521 \"Mail delivery for this user has been disabled by the administrator.\"" >> /etc/mail/virtusertable
+        done
+        cd "$etcmail"
+        make
+        cd - > /dev/null 2>&1
+        tick
+        echo " done"
+    fi
+}
+if [[ $(id -u) -ne 0 ]]; then
+    echo "$prog: Must be run as root, aborting."
+    exit 1
+elif [[ -z "$args" ]]; then
+    echo "$prog: syntax: suspend-mail-delivery <username|--inactive>"
+    exit 1
+elif [[ "$args" == "--inactive" ]]; then 
+    # Suspend all inactive users
+    . "$DIR/find-active-email-users"
+    find_inactive_mail_users_to_suspend | while read user; do 
+        suspend_user "$user" || echo "Could not suspend user $user"
+    done
+else
+    # Suspend one user
+    suspend_user "$args"
+fi
+
+
