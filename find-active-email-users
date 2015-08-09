@@ -1,0 +1,121 @@
+#!/bin/bash
+# Use unofficial bash strict mode http://redsymbol.net/articles/unofficial-bash-strict-mode/
+set -euo pipefail
+IFS=$'\n\t'
+
+
+this_year() {
+	date +%Y
+}
+
+last_year() {
+	expr $(this_year) - 1
+}
+
+#echo this year $(this_year) last year $(last_year);
+
+
+find_active_mail_users_in_dot_forward() {
+	find /home -maxdepth 2 -name .forward | cut -d/ -f 3
+}
+
+find_active_mail_users_in_maillog() {
+	egrep 'imap|pop' $* |  \
+	perl -ne '/user=(<|)(.*?)(>|)(,|) [a-z]*?=/; print lc($2) . "\n";'  | \
+	egrep -v '\?\?\?|^$|@' |
+	sort -u
+}
+
+find_active_mail_users_in_procmailrc() {
+	find /home -maxdepth 2 -name .procmailrc -print0 | \
+	xargs -0 grep \! | \
+	egrep -v '^#' | \
+	cut -d/ -f 3 | \
+	sort -u
+}
+find_active_mail_users_whitelist() {
+	# These users are whitelisted
+	echo <<EOF
+root
+EOF
+}
+
+find_active_mail_users_by_finger() {
+	find_mail_users | while read user; do
+ 		if finger "$user" 2>/dev/null | egrep "Unread since.*($(this_year)|$(last_year))" > /dev/null 2>&1; then
+			echo $user
+		fi
+	done
+}
+
+find_active_users_by_home_directory() {
+	TMPDATE=$(mktemp -t mailsuspenddatehomedir.XXXXXXXXXX) && {
+		touch "$TMPDATE" --date="Jan 1 $(last_year)"
+		ls -l "$TMPDATE"
+		find /home -maxdepth 1 -type d -newer "$TMPDATE" | cut -d/ -f 3 
+		rm -f "$TMPDATE"
+	} || {
+		echo "Could not create temp file"
+		return 1
+	}
+}
+
+find_active_users_by_maildir_dovecot_index() {
+	TMPDATE=$(mktemp -t mailsuspenddatedovecot.XXXXXXXXXX) && {
+		touch "$TMPDATE" --date="Jan 1 $(last_year)"
+		ls -l "$TMPDATE"
+		find /home -maxdepth 3 -type f -name dovecot.index -newer "$TMPDATE" | cut -d/ -f 3 
+		rm -f "$TMPDATE"
+	} || {
+		echo "Could not create temp file"
+		return 1
+	}
+}
+
+
+find_active_mail_users() {
+	(
+		find_active_mail_users_in_procmailrc
+                find_active_mail_users_in_dot_forward
+                find_active_mail_users_by_finger
+                find_active_users_by_home_directory
+                find_active_users_by_maildir_dovecot_index
+                find_active_mail_users_whitelist
+		cat /var/log/maillog* | find_active_mail_users_in_maillog
+	) | sort -u
+}
+
+find_mail_users() {
+	ls /var/spool/mail
+}
+
+find_inactive_mail_users_already_processed() {
+	 ls /home/*/inbox-old.zip | cut -d/ -f 3
+}
+
+find_inactive_mail_users_suspended() {
+	grep '@obscure.org error:5.2.1:521' /etc/mail/virtusertable | cut -d@ -f 1
+}
+
+find_inactive_mail_users() {
+	(
+		find_inactive_mail_users_already_processed
+		find_inactive_mail_users_suspended
+	) | sort -u
+}
+
+find_inactive_mail_users_to_suspend() {
+	TMPFILE=$(mktemp -t mailsuspend.XXXXXXXXXX) && {
+		# Safe to use $TMPFILE in this block
+		(	
+			find_active_mail_users
+			find_inactive_mail_users
+		) | sort -u >> "$TMPFILE"
+		find_mail_users | grep -v -f "$TMPFILE"
+		rm -f "$TMPFILE"
+	} || {
+		echo "Could not create temp file"
+		return 1
+	}
+}
+
