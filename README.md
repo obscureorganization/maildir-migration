@@ -68,17 +68,22 @@ echo time ~/bin/mb2md.pl -U -K -S -t -s mail -R | batch
 
 It would be better to do it all in one go, though, and batch is
 a good way of moderating that:
+
+```
 batch <<EOF
 time /usr/local/bin/mb2md.pl -U -K -S -t -m
 time /usr/local/bin/mb2md.pl -U -K -S -t -s mail -R
 EOF
+```
 
 This script is now in convert-mbox-to-maildir in this project.
 
 Here is a good way to gauge how many people are still using the legacy imapd:
 
+```
 sudo grep imapd /var/log/maillog /var/log/maillog.*  | awk '/Login/{print $7}'
 | cut -f2 -d= |  sort -u > imapusers.txt
 wc -l imapusers.txt
+```
 
 
