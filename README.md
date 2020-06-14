@@ -86,4 +86,11 @@ sudo grep imapd /var/log/maillog /var/log/maillog.*  | awk '/Login/{print $7}'
 wc -l imapusers.txt
 ```
 
+ 
+# Acknowledgements
+Thanks go to Scott Hanselman for the [suggestion and instructions on switching the git default branch from master to main](https://www.hanselman.com/blog/EasilyRenameYourGitDefaultBranchFromMasterToMain.aspx). This repository transitioned to using `main` as its default branch on 2020-06-14.
 
+# License
+Copyright &copy; 2020 by The Obscure Organization
+
+This software is MIT licensed, see [`LICENSE`](LICENSE) for details.
