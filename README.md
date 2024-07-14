@@ -63,8 +63,10 @@ mailbox names that have a "." in them to have a "_" instead.
 
 Here is the series of scripts that I ran to convert my own mail spool:
 
+```
 time ~/bin/mb2md.pl -U -K -S -t -m
 echo time ~/bin/mb2md.pl -U -K -S -t -s mail -R | batch
+```
 
 It would be better to do it all in one go, though, and batch is
 a good way of moderating that:
